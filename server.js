@@ -5,9 +5,13 @@ const http = require("http");
 const { UsertypeDefs } = require("./graphql/Schemas");
 const { UserResolvers } = require("./graphql/Resolvers");
 const { connectionDB } = require("./db/connection");
+const { getUsers } = require("./Authentication/Authentication");
+
 require("dotenv").config();
 
 const startApolloServer = async () => {
+  connectionDB();
+
   const app = express();
   const httpServer = http.createServer(app);
 
@@ -15,6 +19,17 @@ const startApolloServer = async () => {
     typeDefs: [UsertypeDefs],
     resolvers: [UserResolvers],
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+    context: async ({ req, res }) => {
+      const token = req.headers.authorization || "";
+
+      const usuario = getUsers(token);
+
+      console.log(usuario);
+
+      return {
+        usuario,
+      };
+    },
   });
 
   await server.start();
@@ -23,18 +38,15 @@ const startApolloServer = async () => {
     app,
     path: "/",
     cors: {
+      credentials: true,
       methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     },
   });
-
-  connectionDB();
 
   httpServer.listen(
     process.env.PORT,
     console.log(`API CONECTADA EN http://localhost:${process.env.PORT}`)
   );
-
-
 };
 
 startApolloServer();
